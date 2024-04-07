@@ -4,10 +4,7 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
 import bodyParser from 'body-parser';
-
-
-import md5 from 'md5';
-import { name } from 'ejs';
+import bcrypt from 'bcrypt';
 
 
 const app = express()
@@ -18,9 +15,15 @@ const __dirname = dirname(__filename);
 app.use(express.static(__dirname + '\\public'));
 app.use(bodyParser.urlencoded({ extended: true }));
 
+
 var users = []
 var usercredit = []
 var count = 0;
+const saltRounds = 10;
+
+
+
+
 
 
 app.get('/', function (req, res) {
@@ -32,15 +35,25 @@ app.get('/', function (req, res) {
 
 app.post('/', function (req, res) {
         var a = req.body.fname
+        var b = req.body.password
         var validuser = 0;
+        var position;
 
         for (let i = 0; i < count; i++) {
                 if (a == users[i]['userid']) {
                         validuser = 1;
+                        position = i;
                 }
         }
         if (validuser == 1) {
-                console.log("valid user")
+                bcrypt.compare(b, users[position]['password'], function (err, result) {
+                        if (result) {
+                                console.log("Login Successful")
+                        }
+                        else {
+                                console.log("Incorrect password");
+                        }
+                });
         }
         else {
                 console.log("Invalid user")
@@ -59,21 +72,19 @@ app.post('/register', function (req, res) {
 
         var userid = req.body.userid
         var fname = req.body.fname
-        var pass = (md5(req.body.pass))
 
-        usercredit['userid'] = userid
-        usercredit['name'] = fname
-        usercredit['password'] = pass
+        bcrypt.hash(req.body.pass, saltRounds, function (err, hash) {
+                usercredit['userid'] = userid
+                usercredit['name'] = fname
+                usercredit['password'] = hash
 
-        users.push(structuredClone(usercredit))
-
-        for (let i = 0; i < count; i++) {
-                console.log(users[i]['userid'])
-        }
-
+                users.push(structuredClone(usercredit))
+                console.log(users)
+        });
 
         res.render('register.ejs')
 })
+
 
 app.listen(2000, function (req, res) {
         console.log("Server started")
